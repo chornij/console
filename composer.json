@@ -1,0 +1,18 @@
+{
+  "name": "chornij/console",
+  "description": "Console tools",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Igor Chornij",
+      "email": "chornij.i.v@gmail.com"
+    }
+  ],
+  "require": {
+  },
+  "autoload": {
+    "psr-4": {
+      "chornij\\console\\": ""
+    }
+  }
+}
