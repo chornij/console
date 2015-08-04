@@ -63,4 +63,5 @@ class ReportTest extends \PHPUnit_Framework_TestCase
         $this->report->writeXml($obj->xmlResult);
     }
 
-}```
+}
+```
