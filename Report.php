@@ -31,6 +31,16 @@ class Report
     public $defaultStyles = [];
 
     /**
+     * @var bool Display XML errors in output
+     */
+    public $displayXmlErrors = false;
+
+    /**
+     * @var bool Force supporting 256 color for terminals
+     */
+    public $forceSupport256Color = false;
+
+    /**
      * @var array default srtyles
      */
     private $styles = [
@@ -141,6 +151,7 @@ class Report
         }
 
         $xmlObject = new XmlHelper($text);
+        $xmlObject->displayErrors = $this->displayXmlErrors;
 
         return $this->colorize($xmlObject->getFormattedText(), $styles) . PHP_EOL;
     }
@@ -231,7 +242,11 @@ class Report
      */
     public function is256ColorsSupported()
     {
-        return DIRECTORY_SEPARATOR === '/' && strpos(getenv('TERM'), '256color') !== false;
+        if ($this->forceSupport256Color) {
+            return true;
+        } else {
+            return DIRECTORY_SEPARATOR === '/' && strpos(getenv('TERM'), '256color') !== false;
+        }
     }
 
     /**
