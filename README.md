@@ -1,4 +1,4 @@
-Console tools
+PHP console tools
 ====================
 - Report component - allow colorize output in console (useful for testing) 
 
