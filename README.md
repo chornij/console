@@ -2,6 +2,7 @@ PHP console tools
 ====================
 [![Code Climate](https://codeclimate.com/github/chornij/console/badges/gpa.svg)](https://codeclimate.com/github/chornij/console)
 [![Test Coverage](https://codeclimate.com/github/chornij/console/badges/coverage.svg)](https://codeclimate.com/github/chornij/console/coverage)
+[![Build Status](https://secure.travis-ci.org/chornij/console.png)](http://travis-ci.org/chornij/console)
 
 - Report component - allow colorize output in console (useful for testing) 
 
