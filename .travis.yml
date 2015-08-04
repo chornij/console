@@ -27,7 +27,3 @@ install:
 
 script:
   - vendor/bin/phpunit --verbose --configuration phpunit.config.xml tests
-
-addons:
-  code_climate:
-    repo_token: afe3595fb56943866b6087510e48d4380764b9f225ab6ffbfdb71d1168bcbeea
