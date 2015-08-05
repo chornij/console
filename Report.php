@@ -154,78 +154,98 @@ class Report
         if (!is_null($styles)) {
             $xml = $this->colorize($xmlObject->getFormattedText(), $styles) . PHP_EOL;
         } else {
-            $parser = xml_parser_create();
-
-            xml_parser_set_option($parser, XML_OPTION_TARGET_ENCODING, 'UTF-8');
-            xml_parser_set_option($parser, XML_OPTION_CASE_FOLDING, 0);
-            xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
-
-            xml_parse_into_struct($parser, $xmlObject->getFormattedText(), $rows, $index);
-
             $xml = '';
-            foreach ($rows as $row) {
+            foreach ($this->getParsedXmlRows($xmlObject) as $row) {
                 $open = $close = [];
                 $value = '';
 
                 switch ($row['type']) {
                     case 'open':
-                        $open = [
-                            $this->colorize('<', $this->xmlAngleStyle),
-                            $this->colorize($row['tag'], $this->xmlTagStyle),
-                            $this->colorize('>', $this->xmlAngleStyle),
-                        ];
+                        $open = $this->generateTag($row, '<', '>');
                         break;
                     case 'complete':
                         if (isset($row['value'])) {
-                            $open = [
-                                $this->colorize('<', $this->xmlAngleStyle),
-                                $this->colorize($row['tag'], $this->xmlTagStyle),
-                                $this->colorize('>', $this->xmlAngleStyle),
-                            ];
-
-                            if (isset($row['attributes'])) {
-                                $attributes = '';
-                                foreach ($row['attributes'] as $key => $value) {
-                                    $attributes .= ' ' . $this->colorize($key, $this->xmlAttributeStyle) .
-                                        $this->colorize('=', $this->xmlEqualSignStyle) .
-                                        $this->colorize('"' . $value . '"', $this->xmlAttributeValueStyle);
-                                }
-
-                                $open[1] .= $attributes;
-                            }
-
+                            $open = $this->generateTag($row, '<', '>', true);
                             $value = $this->colorize($row['value'], $this->xmlTagValueStyle);
-                            $close = [
-                                $this->colorize('</', $this->xmlAngleStyle),
-                                $this->colorize($row['tag'], $this->xmlTagStyle),
-                                $this->colorize('>', $this->xmlAngleStyle),
-                            ];
+                            $close = $this->generateTag($row, '</', '>');
                         } else {
-                            $open = [
-                                $this->colorize('<', $this->xmlAngleStyle),
-                                $this->colorize($row['tag'], $this->xmlTagStyle),
-                                $this->colorize('/>', $this->xmlAngleStyle),
-                            ];
+                            $open = $this->generateTag($row, '<', '/>');
                         }
                         break;
                     case 'close':
-                        $close = [
-                            $this->colorize('</', $this->xmlAngleStyle),
-                            $this->colorize($row['tag'], $this->xmlTagStyle),
-                            $this->colorize('>', $this->xmlAngleStyle),
-                        ];
+                        $close = $this->generateTag($row, '</', '>');
                         break;
                 }
 
                 $indent = $row['level'] > 1 ? str_repeat(' ', $row['level'] * 2) : null;
-
                 $xml .= $indent . implode('', $open) . $value . implode('', $close) . PHP_EOL;
             }
-
-            xml_parser_free($parser);
         }
 
         return $xml;
+    }
+
+    /**
+     * Parse XML text into array by line
+     *
+     * @param XmlHelper $xmlObject Xml Object
+     *
+     * @return mixed
+     */
+    private function getParsedXmlRows(XmlHelper $xmlObject)
+    {
+        $parser = xml_parser_create();
+
+        xml_parser_set_option($parser, XML_OPTION_TARGET_ENCODING, 'UTF-8');
+        xml_parser_set_option($parser, XML_OPTION_CASE_FOLDING, 0);
+        xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
+
+        xml_parse_into_struct($parser, $xmlObject->getFormattedText(), $rows);
+
+        xml_parser_free($parser);
+
+        return $rows;
+    }
+
+    /**
+     * Generate complate tag
+     *
+     * @param array $row Row data
+     * @param string $openAngle Open angle
+     * @param string $closeAngle Closing angle
+     * @param bool $checkAttributes Check attributes exists and generate it
+     *
+     * @return array
+     */
+    private function generateTag($row, $openAngle, $closeAngle, $checkAttributes = false)
+    {
+        return [
+            $this->colorize($openAngle, $this->xmlAngleStyle),
+            $this->colorize($row['tag'], $this->xmlTagStyle) . ($checkAttributes ? $this->addAttributes($row) : null),
+            $this->colorize($closeAngle, $this->xmlAngleStyle),
+        ];
+    }
+
+    /**
+     * Render tag attributes
+     *
+     * @param array $row Row data
+     *
+     * @return null|string
+     */
+    private function addAttributes($row)
+    {
+        $attributes = null;
+
+        if ($row['type'] === 'complete' && isset($row['attributes'])) {
+            foreach ($row['attributes'] as $key => $value) {
+                $attributes .= ' ' . $this->colorize($key, $this->xmlAttributeStyle) .
+                    $this->colorize('=', $this->xmlEqualSignStyle) .
+                    $this->colorize('"' . $value . '"', $this->xmlAttributeValueStyle);
+            }
+        }
+
+        return $attributes;
     }
 
     /**
