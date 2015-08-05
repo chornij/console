@@ -13,11 +13,6 @@ class Report
     const COLOR256_REGEXP = '~^(bg_)?color_([0-9]{1,3})$~';
 
     /**
-     * @var array Xml writing styles
-     */
-    public $xmlStyles = ['cyan'];
-
-    /**
      * @var array Titles writing default styles
      */
     public $titleStyles = [
@@ -39,6 +34,13 @@ class Report
      * @var bool Force supporting 256 color for terminals
      */
     public $forceSupport256Color = false;
+
+    public $xmlAngleStyle = 'cyan';
+    public $xmlTagStyle = 'cyan';
+    public $xmlTagValueStyle = 'light_gray';
+    public $xmlAttributeStyle = ['blue', 'bold', 'italic'];
+    public $xmlEqualSignStyle = 'light_gray';
+    public $xmlAttributeValueStyle = ['magenta', 'italic'];
 
     /**
      * @var array default srtyles
@@ -137,23 +139,93 @@ class Report
     }
 
     /**
-     * Write messge in XML format
+     * Write message in XML format
      *
      * @param string $text XML text
-     * @param array $styles Additional styles
+     * @param array|string|null $styles XML styles
      *
      * @return string
      */
-    public function writeXml($text, $styles = [])
+    public function writeXml($text, $styles = null)
     {
-        if (count($styles) == 0) {
-            $styles = $this->xmlStyles;
-        }
-
         $xmlObject = new XmlHelper($text);
         $xmlObject->displayErrors = $this->displayXmlErrors;
 
-        return $this->colorize($xmlObject->getFormattedText(), $styles) . PHP_EOL;
+        if (!is_null($styles)) {
+            $xml = $this->colorize($xmlObject->getFormattedText(), $styles) . PHP_EOL;
+        } else {
+            $parser = xml_parser_create();
+
+            xml_parser_set_option($parser, XML_OPTION_TARGET_ENCODING, 'UTF-8');
+            xml_parser_set_option($parser, XML_OPTION_CASE_FOLDING, 0);
+            xml_parser_set_option($parser, XML_OPTION_SKIP_WHITE, 1);
+
+            xml_parse_into_struct($parser, $xmlObject->getFormattedText(), $rows, $index);
+
+            $xml = '';
+            foreach ($rows as $row) {
+                $open = $close = [];
+                $value = '';
+
+                switch ($row['type']) {
+                    case 'open':
+                        $open = [
+                            $this->colorize('<', $this->xmlAngleStyle),
+                            $this->colorize($row['tag'], $this->xmlTagStyle),
+                            $this->colorize('>', $this->xmlAngleStyle),
+                        ];
+                        break;
+                    case 'complete':
+                        if (isset($row['value'])) {
+                            $open = [
+                                $this->colorize('<', $this->xmlAngleStyle),
+                                $this->colorize($row['tag'], $this->xmlTagStyle),
+                                $this->colorize('>', $this->xmlAngleStyle),
+                            ];
+
+                            if (isset($row['attributes'])) {
+                                $attributes = '';
+                                foreach ($row['attributes'] as $key => $value) {
+                                    $attributes .= ' ' . $this->colorize($key, $this->xmlAttributeStyle) .
+                                        $this->colorize('=', $this->xmlEqualSignStyle) .
+                                        $this->colorize('"' . $value . '"', $this->xmlAttributeValueStyle);
+                                }
+
+                                $open[1] .= $attributes;
+                            }
+
+                            $value = $this->colorize($row['value'], $this->xmlTagValueStyle);
+                            $close = [
+                                $this->colorize('</', $this->xmlAngleStyle),
+                                $this->colorize($row['tag'], $this->xmlTagStyle),
+                                $this->colorize('>', $this->xmlAngleStyle),
+                            ];
+                        } else {
+                            $open = [
+                                $this->colorize('<', $this->xmlAngleStyle),
+                                $this->colorize($row['tag'], $this->xmlTagStyle),
+                                $this->colorize('/>', $this->xmlAngleStyle),
+                            ];
+                        }
+                        break;
+                    case 'close':
+                        $close = [
+                            $this->colorize('</', $this->xmlAngleStyle),
+                            $this->colorize($row['tag'], $this->xmlTagStyle),
+                            $this->colorize('>', $this->xmlAngleStyle),
+                        ];
+                        break;
+                }
+
+                $indent = $row['level'] > 1 ? str_repeat(' ', $row['level'] * 2) : null;
+
+                $xml .= $indent . implode('', $open) . $value . implode('', $close) . PHP_EOL;
+            }
+
+            xml_parser_free($parser);
+        }
+
+        return $xml;
     }
 
     /**
